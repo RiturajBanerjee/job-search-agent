@@ -1,13 +1,12 @@
 # backend/modules/jd_analyzer.py
 import logging
 import json
-import google.generativeai as genai
+from google import genai
 from config import settings
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=settings.gemini_api_key)
-model = genai.GenerativeModel("gemini-2.0-flash")
+client = genai.Client(api_key=settings.gemini_api_key)
 
 EXTRACTION_PROMPT = """
 You are a job description parser and role matcher.
@@ -67,7 +66,10 @@ def extract_jd_requirements(jd_text: str, search_role: str, job_title: str) -> d
     )
     raw = ""
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+                                model="gemini-2.0-flash",
+                                contents=prompt,
+                                )
         raw = response.text.strip()
 
         # Strip markdown fences if present

@@ -1,43 +1,56 @@
-"""FastAPI app entry point"""
+# backend/main.py
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from config import settings
-from database import engine, Base
-from routers import auth_router, config_router, jobs_router
-from modules.scheduler import init_scheduler
+from database import init_db
+from modules.scheduler import start_scheduler
+from routers.auth_router import router as auth_router
+from routers.jobs_router import router as jobs_router
+from routers.config_router import router as config_router
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Logging setup — all modules use this
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    scheduler = init_scheduler()
+    # Runs once on startup
+    logger.info("Starting JobRadar backend...")
+    init_db()           # create tables if they don't exist
+    start_scheduler()   # start the background job scheduler
+    logger.info("Backend ready ✓")
     yield
-    # Shutdown
-    scheduler.shutdown()
+    # Runs on shutdown
+    logger.info("Shutting down...")
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="JobRadar API",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
-# Add CORS middleware
+# Allow requests from React dev server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",   # React dev
+        "http://localhost:5173",   # Vite dev (if used)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth_router.router)
-app.include_router(config_router.router)
-app.include_router(jobs_router.router)
+# Mount all routers
+app.include_router(auth_router)
+app.include_router(jobs_router)
+app.include_router(config_router)
 
 @app.get("/health")
-async def health_check():
+def health():
     return {"status": "ok"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

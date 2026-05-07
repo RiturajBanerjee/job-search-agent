@@ -1,48 +1,26 @@
-import axios from 'axios'
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+});
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-})
+// Attach JWT token to every request
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Auth endpoints
+// Auth
 export const login = (email, password) =>
-  api.post('/auth/login', { email, password })
+  API.post("/auth/login", { email, password });
 
-export const register = (email, password, full_name) =>
-  api.post('/auth/register', { email, password, full_name })
+// Jobs
+export const searchJobs = (params) => API.post("/jobs/search", params);
+export const getRecentJobs = () => API.get("/jobs/recent");
 
-export const getCurrentUser = () =>
-  api.get('/auth/me')
+// Config
+export const getConfig = () => API.get("/config");
+export const saveConfig = (data) => API.post("/config", data);
 
-// Config endpoints
-export const getConfig = () =>
-  api.get('/config/')
-
-export const updateConfig = (data) =>
-  api.put('/config/', data)
-
-// Jobs endpoints
-export const getJobs = (skip = 0, limit = 10) =>
-  api.get('/jobs/', { params: { skip, limit } })
-
-export const getJob = (jobId) =>
-  api.get(`/jobs/${jobId}`)
-
-export const createJob = (jobData) =>
-  api.post('/jobs/', jobData)
-
-export const deleteJob = (jobId) =>
-  api.delete(`/jobs/${jobId}`)
-
-export default api
+export default API;

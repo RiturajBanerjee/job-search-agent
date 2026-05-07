@@ -1,25 +1,22 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Settings from './pages/Settings'
-import './App.css'
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false)
-
-  return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
-          <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
-          <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </div>
-    </Router>
-  )
+function PrivateRoute({ children }) {
+  return localStorage.getItem("token") ? children : <Navigate to="/login" replace />;
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
